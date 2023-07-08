@@ -32,3 +32,4 @@ SpacesInParentheses: true
 SpacesInSquareBrackets: true
 AlignConsecutiveAssignments: true
 PointerAlignment: Left
+AlignConsecutiveDeclarations: Consecutive
