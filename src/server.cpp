@@ -184,7 +184,7 @@ HttpRequest_t Server_t::handleRead( Server_t::otherSockInfo_t* sockInfo )
         }
     }
 
-    traceInfo("Returning from handleRead");
+    traceInfo( "Returning from handleRead" );
     return httpRequest;
 }
 
@@ -208,6 +208,7 @@ size_t sendAll( HttpRequest_t& httpRequest, int32_t connfd )
         dataSent += bytesSent;
     }
 
+    traceInfo( "SENT %d bytes", dataSent );
     return dataSent;
 }
 
