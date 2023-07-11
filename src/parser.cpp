@@ -29,10 +29,14 @@ void Parser_t::mapRequestHeaders( HttpRequest_t& httpRequest )
     int32_t keyEndPos   = 0;
     int32_t valueEndPos = 0;
 
-    std::string tmp{ httpRequest.buffer };
-    if ( tmp.find( "\r\n\r\n" ) == std::string::npos )
     {
-        traceError( "HttpMessage was not correctly ended\n%s" );
+        // Scope to destroy tmp early
+        std::string tmp{ httpRequest.buffer };
+        if ( tmp.find( "\r\n\r\n" ) == std::string::npos )
+        {
+            traceError( "HttpMessage was not correctly ended\n%s" );
+            return;
+        }
     }
 
     for ( std::string line; std::getline( stream, line, '\n' ); )
@@ -59,9 +63,9 @@ void Parser_t::mapRequestHeaders( HttpRequest_t& httpRequest )
         httpRequest.headers.insert( { key, value } );
     }
 
-    traceInfo("Parsed Headers:");
+    traceInfo( "Parsed Headers:" );
     for ( const auto& [ key, val ] : httpRequest.headers )
     {
-        traceInfo( "Key: %s --> Value: %s", key.c_str(), val.c_str() );
+        traceInfo( "    Key: %s --> Value: %s", key.c_str(), val.c_str() );
     }
 }
