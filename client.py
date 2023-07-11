@@ -3,13 +3,15 @@ from time import sleep
 s = socket.socket()         # Create a socket object
 s.connect(('localhost', 8000))
 
-s.sendall("Hello from client\r\n\r\n".encode())
-msg = s.recv(21)
+sendText = "GET / HTTP/1.1\r\nHost: DRINOOOOSAN\r\nHello from client\r\n\r\n"
+s.sendall(sendText.encode())
+msg = s.recv(len(sendText))
 print(msg.decode())
 print("-"* 40)
 
-s.sendall("Ah Hi server\r\n\r\n".encode())
-msg = s.recv(16)
+secondSentText = "Ah Hi server\r\n\r\n"
+s.sendall(secondSentText.encode())
+msg = s.recv(len(secondSentText))
 print(msg.decode())
 
 
