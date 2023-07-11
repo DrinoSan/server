@@ -56,13 +56,12 @@ void Parser_t::mapRequestHeaders( HttpRequest_t& httpRequest )
         std::string value( line.c_str() + keyEndPos + 2,
                            line.c_str() + valueEndPos );
 
-        traceInfo( "Key: %s", key.c_str() );
-        traceInfo( "Value: %s", value.c_str() );
         httpRequest.headers.insert( { key, value } );
     }
 
+    traceInfo("Parsed Headers:");
     for ( const auto& [ key, val ] : httpRequest.headers )
     {
-        traceInfo( "Key: %s, Value: %s", key.c_str(), val.c_str() );
+        traceInfo( "Key: %s --> Value: %s", key.c_str(), val.c_str() );
     }
 }
