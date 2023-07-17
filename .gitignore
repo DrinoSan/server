@@ -63,8 +63,8 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
-
-
 # Cmake build
 build
 .cache
+
+settings.json
