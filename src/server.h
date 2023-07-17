@@ -16,7 +16,7 @@
 constexpr int     BACK_LOG    = 10000;
 constexpr int32_t NUM_WORKERS = 5;
 constexpr int32_t NUM_EVENTS  = 100;
-constexpr int32_t CHUNK_SIZE = 1000;
+constexpr int32_t CHUNK_SIZE  = 1000;
 
 class Server_t
 {

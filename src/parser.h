@@ -6,7 +6,7 @@
 class Parser_t
 {
   public:
-    Parser_t() = default;
+    Parser_t()  = default;
     ~Parser_t() = default;
 
     void mapRequestHeaders( HttpRequest_t& httpRequest );

@@ -11,7 +11,7 @@ class HttpMessage_t
     // TODO: Implement me
   public:
     std::map<std::string, std::string> headers;
-    char buffer[BUFFER_SIZE];
+    char                               buffer[ BUFFER_SIZE ];
 };
 
 #endif   // HTTPMESSAGE_H

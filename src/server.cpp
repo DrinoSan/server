@@ -186,7 +186,7 @@ HttpRequest_t Server_t::handleRead( Server_t::otherSockInfo_t* sockInfo )
     }
 
     Parser_t parser;
-    parser.mapRequestHeaders(httpRequest);
+    parser.mapRequestHeaders( httpRequest );
 
     traceInfo( "Returning from handleRead" );
 
