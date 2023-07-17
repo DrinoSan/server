@@ -7,6 +7,7 @@
 #include "parser.h"
 #include "utils/logging.h"
 
+//----------------------------------------------------------------------------
 void Parser_t::mapRequestHeaders( HttpRequest_t& httpRequest )
 {
     std::istringstream stream{ httpRequest.buffer };
@@ -23,35 +24,35 @@ void Parser_t::mapRequestHeaders( HttpRequest_t& httpRequest )
 
     if ( httpRequest.method == HttpRequest_t::HttpMethode::UNKNOWN )
     {
-        traceError( "We got UNKNOWN http method" );
+        traceError( "%s", "We got UNKNOWN http method" );
     }
-
-    int32_t keyEndPos   = 0;
-    int32_t valueEndPos = 0;
 
     {
         // Scope to destroy tmp early
         std::string tmp{ httpRequest.buffer };
         if ( tmp.find( "\r\n\r\n" ) == std::string::npos )
         {
-            traceError( "HttpMessage was not correctly ended\n%s" );
+            traceError( "%s", "HttpMessage was not correctly ended\n" );
             return;
         }
     }
+
+    int32_t keyEndPos   = 0;
+    int32_t valueEndPos = 0;
 
     for ( std::string line; std::getline( stream, line, '\n' ); )
     {
         keyEndPos = 0;
         if ( ( keyEndPos = line.find( ":" ), keyEndPos ) == std::string::npos )
         {
-            traceError( "Could not find ':'" );
+            traceError( "%s", "Could not find ':'" );
             break;
         }
 
         valueEndPos = 0;
         if ( ( valueEndPos = line.find( "\r" ) ) == std::string::npos )
         {
-            traceError( "Could not find correctly ended value" );
+            traceError( "%s", "Could not find correctly ended value" );
             break;
         }
 
@@ -63,7 +64,7 @@ void Parser_t::mapRequestHeaders( HttpRequest_t& httpRequest )
         httpRequest.headers.insert( { key, value } );
     }
 
-    traceInfo( "Parsed Headers:" );
+    traceInfo( "%s", "Parsed Headers:" );
     for ( const auto& [ key, val ] : httpRequest.headers )
     {
         traceInfo( "    Key: %s --> Value: %s", key.c_str(), val.c_str() );

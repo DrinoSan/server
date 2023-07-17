@@ -1,10 +1,13 @@
 #include "logging.h"
+#include <iostream>
+#include <string>
 
 //-----------------------------------------------------------------------------
-void traceInfo( const std::string format, ... )
+void LogInfo( int line, const char* file, const std::string format, ... )
 {
     const std::string formattedString =
-        static_cast<std::string>( InfoStr ) + format;
+        static_cast<std::string>( InfoStr ) + format + "\t\t[ " +
+        std::to_string( line ) + " ]" + "\t\t[" + std::string( file ) + "]";
 
     va_list args;
     va_start( args, format );
@@ -14,10 +17,11 @@ void traceInfo( const std::string format, ... )
 }
 
 //-----------------------------------------------------------------------------
-void traceError( const std::string format, ... )
+void LogError( int line, const char* file, const std::string format, ... )
 {
     const std::string formattedString =
-        static_cast<std::string>( ErrorStr ) + format;
+        static_cast<std::string>( ErrorStr ) + format + "\t\t[ " +
+        std::to_string( line ) + " ]" + "\t\t[" + std::string( file ) + "]";
 
     va_list args;
     va_start( args, format );

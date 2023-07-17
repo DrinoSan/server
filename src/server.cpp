@@ -19,7 +19,7 @@
 //----------------------------------------------------------------------------
 Server_t::Server_t( int32_t port ) : port{ port }
 {
-    traceInfo( "Setting up kqueue fd's" );
+    traceInfo( "%s", "Setting up kqueue fd's" );
     for ( uint8_t idx = 0; idx < NUM_WORKERS; ++idx )
     {
         working_kqueue_fd[ idx ] = kqueue();
@@ -29,7 +29,7 @@ Server_t::Server_t( int32_t port ) : port{ port }
 }
 
 //----------------------------------------------------------------------------
-void* get_in_addr( struct sockaddr* sa )
+void* getInAddr( struct sockaddr* sa )
 {
     if ( sa->sa_family == AF_INET )
     {
@@ -46,7 +46,7 @@ void Server_t::listenAndAccept()
 
     while ( true )
     {
-        traceInfo( "Waiting for connection..." );
+        traceInfo( "%s", "Waiting for connection..." );
 
         struct sockaddr_storage their_addr;   // connectors address information
         socklen_t               sin_size;
@@ -71,7 +71,7 @@ void Server_t::listenAndAccept()
         memset( s, '\0', INET_ADDRSTRLEN );
 
         inet_ntop( their_addr.ss_family,
-                   get_in_addr( ( struct sockaddr* ) &their_addr ), s,
+                   getInAddr( ( struct sockaddr* ) &their_addr ), s,
                    sizeof s );
 
         traceInfo( "Got connection from: %s with address family: %d", s,
@@ -134,7 +134,7 @@ void Server_t::processWorkerEvents( int8_t worker_idx )
             // automatically removed from the kqueue
             if ( working_events[ worker_idx ][ i ].flags & EV_EOF )
             {
-                traceInfo( "Client has disconnected" );
+                traceInfo( "%s", "Client has disconnected" );
 
                 while ( close( sockInfo->sockfd ) == -1 )
                 {
@@ -147,12 +147,12 @@ void Server_t::processWorkerEvents( int8_t worker_idx )
             // a new client wants to connect to our socket.
             else if ( event_fd == sockfd )
             {
-                traceError( "Check me, if you can read me" );
+                traceError( "%s", "Check me, if you can read me" );
                 continue;
             }
             else if ( working_events[ worker_idx ][ i ].filter & EVFILT_READ )
             {
-                traceInfo( "Handling read and write" );
+                traceInfo( "%s", "Handling read and write" );
                 // Read bytes from socket
                 HttpRequest_t httpRequest = handleRead( sockInfo );
                 handleWrite( httpRequest, sockInfo->sockfd );
@@ -174,13 +174,13 @@ HttpRequest_t Server_t::handleRead( Server_t::otherSockInfo_t* sockInfo )
         if ( bytesRead <= 0 )
         {
             // We have a error or client closed connection
-            traceError( "[handleRead] bytesRead: %d", bytesRead );
+            traceError(  "[handleRead] bytesRead: %d", bytesRead );
             break;
         }
 
         if ( strstr( httpRequest.buffer, "\r\n\r\n" ) )
         {
-            // We found a happy end
+            // We found a sane end
             break;
         }
     }
@@ -188,7 +188,7 @@ HttpRequest_t Server_t::handleRead( Server_t::otherSockInfo_t* sockInfo )
     Parser_t parser;
     parser.mapRequestHeaders( httpRequest );
 
-    traceInfo( "Returning from handleRead" );
+    traceInfo( "%s", "Returning from handleRead" );
 
     return httpRequest;
 }
@@ -220,7 +220,7 @@ size_t sendAll( HttpRequest_t& httpRequest, int32_t connfd )
 //-----------------------------------------------------------------------------
 void Server_t::handleWrite( HttpRequest_t& httpRequest, int32_t connfd )
 {
-    traceInfo( "HandleWrite" );
+    traceInfo( "%s", "HandleWrite" );
     sendAll( httpRequest, connfd );
 }
 
@@ -230,14 +230,14 @@ int32_t Server_t::startServer()
     sockfd = socket( PF_INET, SOCK_STREAM, 0 );
     if ( sockfd == -1 )
     {
-        traceError( "Failed on creating socket" );
+        traceError( "%s", "Failed on creating socket" );
         return sockfd;
     }
 
     int opt = 1;
     if ( setsockopt( sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof( opt ) ) )
     {
-        traceError( "Failed setsockopt" );
+        traceError( "%s", "Failed setsockopt" );
     }
 
     struct sockaddr_in addr = {};
@@ -249,14 +249,14 @@ int32_t Server_t::startServer()
     rv = bind( sockfd, ( const struct sockaddr* ) &addr, sizeof( addr ) );
     if ( rv < 0 )
     {
-        traceError( "Failed on bind" );
+        traceError( "%s", "Failed on bind" );
         return rv;
     }
 
     rv = listen( sockfd, BACK_LOG );
     if ( rv == -1 )
     {
-        traceError( "Error on listening" );
+        traceError( "%s", "Error on listening" );
         return rv;
     }
 
