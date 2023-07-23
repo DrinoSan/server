@@ -68,3 +68,4 @@ build
 .cache
 
 settings.json
+.DS_Store
