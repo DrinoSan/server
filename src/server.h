@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <thread>
+#include <csignal>
 
 // Project Headers
 #include "httpRequest.h"

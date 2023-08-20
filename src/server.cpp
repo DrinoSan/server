@@ -10,21 +10,62 @@
 #include <sys/event.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/select.h>
+#include <fcntl.h>
 
 // Project Headers
 #include "httpRequest.h"
 #include "parser.h"
 #include "utils/logging.h"
+#include "utils/sigHandler.h"
 
 //----------------------------------------------------------------------------
 Server_t::Server_t( int32_t port ) : port{ port }
 {
+
     traceInfo( "%s", "Setting up kqueue fd's" );
     for ( uint8_t idx = 0; idx < NUM_WORKERS; ++idx )
     {
         working_kqueue_fd[ idx ] = kqueue();
         traceInfo( "worker %d got %d kqueue descripter", idx,
                    working_kqueue_fd[ idx ] );
+    }
+
+    sockfd = socket( PF_INET, SOCK_STREAM, 0 );
+    if ( sockfd == -1 )
+    {
+        traceError( "%s", "Failed on creating socket" );
+        exit(sockfd);
+    }
+
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    flags |= O_NONBLOCK;
+    fcntl(sockfd, F_SETFL, flags);
+
+    int opt = 1;
+    if ( setsockopt( sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof( opt ) ) )
+    {
+        traceError( "%s", "Failed setsockopt" );
+    }
+
+    struct sockaddr_in addr = {};
+    addr.sin_family         = AF_INET;
+    addr.sin_port           = ntohs( this->port );
+    addr.sin_addr.s_addr    = ntohl( 0 );
+
+    int rv;
+    rv = bind( sockfd, ( const struct sockaddr* ) &addr, sizeof( addr ) );
+    if ( rv < 0 )
+    {
+        traceError( "%s", "Failed on bind" );
+        exit(rv);
+    }
+
+    rv = listen( sockfd, BACK_LOG );
+    if ( rv == -1 )
+    {
+        traceError( "%s", "Error on listening" );
+        exit(rv);
     }
 }
 
@@ -44,7 +85,7 @@ void Server_t::listenAndAccept()
 {
     int8_t worker_idx{ 0 };
 
-    while ( true )
+    while ( !shutdown_flag )
     {
         traceInfo( "%s", "Waiting for connection..." );
 
@@ -56,7 +97,12 @@ void Server_t::listenAndAccept()
 
         if ( otherSockConnection->sockfd == -1 )
         {
-            traceError( "Accept socket failed with: %d", otherSockConnection );
+            if (errno == EWOULDBLOCK || errno == EAGAIN)
+            {
+                continue;
+            }
+
+            // traceError( "Accept socket failed with: %d", otherSockConnection );
             delete otherSockConnection;
             continue;
         }
@@ -98,7 +144,16 @@ void Server_t::listenAndAccept()
         {
             worker_idx = 0;
         }
+
+        if( shutdown_flag )
+        {
+            traceError("%s", "Received shutdown signal, shutdown listener thread");
+            break;
+        }
     }
+
+    // TODO
+    // If we receive a shutdown signal we should do a cleanup if needed and close connections
 }
 
 //-----------------------------------------------------------------------------
@@ -109,7 +164,7 @@ void Server_t::processWorkerEvents( int8_t worker_idx )
     // File descriptor for kqueue
     auto worker_kfd = working_kqueue_fd[ worker_idx ];
 
-    while ( true )
+    while ( !shutdown_flag )
     {
         new_events =
             kevent( worker_kfd, nullptr, 0, working_events[ worker_idx ],
@@ -121,6 +176,7 @@ void Server_t::processWorkerEvents( int8_t worker_idx )
             exit( EXIT_FAILURE );
         }
 
+        traceError("WORKER: %d got %d new events", worker_idx, new_events);
         for ( uint32_t i = 0; i < new_events; ++i )
         {
             int32_t event_fd = working_events[ worker_idx ][ i ].ident;
@@ -157,6 +213,12 @@ void Server_t::processWorkerEvents( int8_t worker_idx )
                 HttpRequest_t httpRequest = handleRead( sockInfo );
                 handleWrite( httpRequest, sockInfo->sockfd );
             }
+        }
+
+        if ( shutdown_flag ) 
+        {
+            traceError("%s", "Received shutdown signal, shutdown worker threads");
+            break;
         }
     }
 }
@@ -227,39 +289,6 @@ void Server_t::handleWrite( HttpRequest_t& httpRequest, int32_t connfd )
 //-----------------------------------------------------------------------------
 int32_t Server_t::startServer()
 {
-    sockfd = socket( PF_INET, SOCK_STREAM, 0 );
-    if ( sockfd == -1 )
-    {
-        traceError( "%s", "Failed on creating socket" );
-        return sockfd;
-    }
-
-    int opt = 1;
-    if ( setsockopt( sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof( opt ) ) )
-    {
-        traceError( "%s", "Failed setsockopt" );
-    }
-
-    struct sockaddr_in addr = {};
-    addr.sin_family         = AF_INET;
-    addr.sin_port           = ntohs( port );
-    addr.sin_addr.s_addr    = ntohl( 0 );
-
-    int rv;
-    rv = bind( sockfd, ( const struct sockaddr* ) &addr, sizeof( addr ) );
-    if ( rv < 0 )
-    {
-        traceError( "%s", "Failed on bind" );
-        return rv;
-    }
-
-    rv = listen( sockfd, BACK_LOG );
-    if ( rv == -1 )
-    {
-        traceError( "%s", "Error on listening" );
-        return rv;
-    }
-
     // start listnener thread here for incoming connections
     listenerThread = std::thread( &Server_t::listenAndAccept, this );
 
@@ -271,9 +300,14 @@ int32_t Server_t::startServer()
     }
 
     listenerThread.join();
-    for ( int i = 0; i < NUM_WORKERS; ++i )
-    {
-        workerThread[ i ].join();
+    traceError("%s", "LISTENER THREAD HAS BEEN KILLED");
+    
+    // Signal worker threads to exit and wait for them to finish.
+    shutdown_flag = 1;
+    for (int i = 0; i < NUM_WORKERS; ++i) {
+        if (workerThread[ i ].joinable()) {
+            workerThread[ i ].join();
+        }
     }
 
     return SERVER_OK;
